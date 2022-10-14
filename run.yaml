@@ -1,0 +1,40 @@
+# -----------------------------------------------------------------------------
+# To learn more about this file:
+#   https://cloud.google.com/build/docs/build-config
+#
+# To learn more about Cloud Build variable substitutions:
+#   https://cloud.google.com/build/docs/configuring-builds/substitute-variable-values#using_user-defined_substitutions
+# -----------------------------------------------------------------------------
+
+  substitutions:
+    _IMAGE: dataflow-ml-ad:latest
+    _JOB_NAME: 'dataflow-ml-ad-job'
+    _TEMP_LOCATION: 'gs://$PROJECT_ID-dataflow-ml-ad/temp'
+    _REGION: us-central1
+    _GPU_TYPE: nvidia-tesla-t4
+    _GPU_COUNT: '1'
+  
+  steps:
+  - name: gcr.io/$PROJECT_ID/$_IMAGE
+    entrypoint: python
+    args:
+    - /pipeline/main.py
+    - --project=$PROJECT_ID 
+    - --model_state_dict_path=gs://$PROJECT_ID-dataflow-ml-ad/frcnn.pth
+    - --runner=DataflowRunner
+    - --region=$_REGION
+    - --job_name=$_JOB_NAME
+    - --temp_location=$_TEMP_LOCATION
+    - --sdk_container_image=gcr.io/$PROJECT_ID/$_IMAGE
+    - --machine_type=n1-standard-32
+    - --experiment=worker_accelerator=type:$_GPU_TYPE;count:$_GPU_COUNT;install-nvidia-driver
+    - --experiment=use_runner_v2
+    - --disk_size_gb=200
+    - --number_of_worker_harness_threads=1
+  
+  
+  options:
+    logging: CLOUD_LOGGING_ONLY
+  
+  # Use the Compute Engine default service account to launch the job.
+  serviceAccount: projects/$PROJECT_ID/serviceAccounts/$PROJECT_NUMBER-compute@developer.gserviceaccount.com

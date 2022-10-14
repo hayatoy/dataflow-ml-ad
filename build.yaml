@@ -1,0 +1,21 @@
+# Copied from https://github.com/GoogleCloudPlatform/python-docs-samples/tree/main/dataflow/gpu-examples/pytorch-minimal
+# -----------------------------------------------------------------------------
+# This Cloud Build config file builds and pushes the image for the workers.
+#
+# To learn more about this file:
+#   https://cloud.google.com/build/docs/build-config
+# -----------------------------------------------------------------------------
+
+  substitutions:
+    _IMAGE: dataflow-ml-ad:latest
+  
+  steps:
+  - name: gcr.io/cloud-builders/docker
+    args: [ build, --tag=gcr.io/$PROJECT_ID/$_IMAGE, . ]
+  
+  images: [ gcr.io/$PROJECT_ID/$_IMAGE ]
+  
+  options:
+    machineType: E2_HIGHCPU_8
+  
+  timeout: 1200s

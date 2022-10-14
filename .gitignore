@@ -130,3 +130,5 @@ dmypy.json
 
 # debug
 /_dataset
+*.pth
+.vscode/

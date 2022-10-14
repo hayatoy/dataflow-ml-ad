@@ -1,0 +1,3 @@
+apache-beam[gcp]==2.42.0rc1
+torch==1.12.1
+torchvision==0.13.1

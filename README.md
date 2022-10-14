@@ -32,7 +32,23 @@ $ gcloud storage cp -r output/center gs://${PROJECT}-dataflow-ml-ad/center
 $ bq --location=${REGION} mk --dataset dfdemo 
 $ bq load --autodetect=true dfdemo.interpolated output/interpolated.csv
 ```
+5. Upload Model to Google Cloud Storage
+```sh
+$ pip install -r requirements.txt
+$ python save_model.py
+$ gcloud storage cp  frcnn.pth gs://${PROJECT}-dataflow-ml-ad/
+```
+## Run the Pipeline
 
+```sh
+$ gcloud builds submit --config build.yaml
+$ export REGION="us-central1"
+$ export GPU_TYPE="nvidia-tesla-t4"
+$ gcloud builds submit \
+    --config run.yaml \
+    --substitutions _REGION=$REGION,_GPU_TYPE=$GPU_TYPE \
+    --no-source
+```
 
 ## References:
 - [Dataflow ML blog](https://cloud.google.com/blog/products/data-analytics/influsing-ml-models-into-production-pipelines-with-dataflow)
