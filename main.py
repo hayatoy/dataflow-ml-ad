@@ -5,6 +5,7 @@
 import argparse
 import io
 import logging
+import json
 from typing import Iterable
 from typing import Tuple
 from typing import Mapping
@@ -50,7 +51,7 @@ class PostProcessor(beam.DoFn):
                                   prediction['labels'].cpu().detach().numpy(),
                                   prediction['scores'].cpu().detach().numpy()):
       yield ({'filename': filename,
-              'bbox': str(bbox),
+              'bbox': json.dumps([float(x) for x in bbox]),
               'label_id': int(label),
               'label': self.LABELS[int(label)],
               'score': float(score)})
@@ -106,25 +107,26 @@ def run(
     frame_id = 'center_camera'
   ORDER BY
     timestamp
-  LIMIT
-    10
   """
+  table_schema = "filename:STRING, bbox:STRING, label_id:NUMERIC, label:STRING, score:FLOAT64"
 
   pipeline = beam.Pipeline(options=pipeline_options)
   filename_value_pair = (
       pipeline
-      | 'ReadImageNames' >> beam.io.ReadFromBigQuery(project=gc_options.project, use_standard_sql=True, query=query)
-      | 'ReadImageData' >> beam.Map(lambda element: read_image(gc_options.project, element))
+      | 'ReadImageNames' >> beam.io.ReadFromBigQuery(
+        project=gc_options.project, use_standard_sql=True, query=query)
+      | 'ReadImageData' >> beam.Map(
+        lambda element: read_image(gc_options.project, element))
       | 'PreprocessImages' >> beam.MapTuple(
-          lambda image_file_name, image_data: (image_file_name, preprocess_image(image_data))))
+        lambda image_file_name, image_data: (image_file_name, preprocess_image(image_data))))
   predictions = (
       filename_value_pair
       | 'PyTorchRunInference' >> RunInference(KeyedModelHandler(model_handler))
       | 'ProcessOutput' >> beam.ParDo(PostProcessor()))
-  predictions | "write to bq" >> beam.io.WriteToBigQuery(
+  predictions | "WriteToBigQuery" >> beam.io.WriteToBigQuery(
     f"{gc_options.project}:dfdemo.inference",
     project=gc_options.project,
-    schema='filename:STRING, bbox:STRING, label_id:NUMERIC, label:STRING, score:FLOAT64',
+    schema=table_schema,
     write_disposition=beam.io.BigQueryDisposition.WRITE_TRUNCATE,
     create_disposition=beam.io.BigQueryDisposition.CREATE_IF_NEEDED)
 
